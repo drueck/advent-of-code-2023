@@ -12,6 +12,8 @@ fn main() {
     let schematic = Schematic::new(&input);
 
     let sum_of_part_numbers: usize = schematic.part_numbers().iter().sum();
+    let sum_of_gear_ratios: usize = schematic.gear_ratios().iter().sum();
 
     println!("The sum of the part numbers is {}", sum_of_part_numbers);
+    println!("The sum of the gear ratios is {}", sum_of_gear_ratios);
 }

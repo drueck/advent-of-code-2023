@@ -95,6 +95,80 @@ impl Schematic {
 
         part_numbers
     }
+
+    pub fn part_number_at(&self, i: usize) -> usize {
+        debug_assert!(self.bytes[i].is_ascii_digit());
+
+        let first_in_row = i - i % self.columns;
+        let last_in_row = first_in_row + self.columns - 1;
+
+        let mut left = first_in_row;
+        let mut right = last_in_row;
+
+        for l in (first_in_row..i).rev() {
+            if !self.bytes[l].is_ascii_digit() {
+                left = l + 1;
+                break;
+            }
+        }
+
+        for r in (i + 1)..=last_in_row {
+            if !self.bytes[r].is_ascii_digit() {
+                right = r - 1;
+                break;
+            }
+        }
+
+        let mut part_number = 0;
+        let mut place = 1;
+
+        for j in (left..=right).rev() {
+            part_number += ((self.bytes[j] - b'0') as usize) * place;
+            place *= 10;
+        }
+
+        part_number
+    }
+
+    pub fn gear_ratios(&self) -> Vec<usize> {
+        let mut results = vec![];
+
+        for i in 0..self.bytes.len() {
+            if self.bytes[i] == b'*' {
+                let mut indices_of_adjacent_digits: Vec<usize> = self
+                    .adjacent_indices(i)
+                    .iter()
+                    .filter_map(|&j| self.bytes[j].is_ascii_digit().then_some(j))
+                    .collect();
+
+                // we're looking for at least two digits adjacent to the *
+                if indices_of_adjacent_digits.len() < 2 {
+                    continue;
+                }
+
+                indices_of_adjacent_digits.sort_unstable();
+
+                let non_adjacent_digit_pairs: Vec<&[usize]> = indices_of_adjacent_digits
+                    .windows(2)
+                    .filter(|pair| pair[1] - pair[0] > 1)
+                    .collect();
+
+                // we're looking for exactly one pair of part numbers adjacent to the *
+                if non_adjacent_digit_pairs.len() != 1 {
+                    continue;
+                }
+
+                let part_number_indicies = non_adjacent_digit_pairs[0];
+
+                let gear_ratio = self.part_number_at(part_number_indicies[0])
+                    * self.part_number_at(part_number_indicies[1]);
+
+                results.push(gear_ratio);
+            }
+        }
+
+        results
+    }
 }
 
 #[cfg(test)]
@@ -148,5 +222,25 @@ pub mod test {
 
         assert_eq!(part_numbers, vec![467, 35, 633, 617, 592, 755, 664, 598]);
         assert_eq!(part_numbers.iter().sum::<usize>(), 4361);
+    }
+
+    #[test]
+    fn test_part_number_at() {
+        let input = fs::read_to_string("test-input.txt").expect("test input exists");
+        let schematic = Schematic::new(&input);
+
+        assert_eq!(schematic.part_number_at(0), 467);
+        assert_eq!(schematic.part_number_at(1), 467);
+        assert_eq!(schematic.part_number_at(2), 467);
+        assert_eq!(schematic.part_number_at(76), 755);
+        assert_eq!(schematic.part_number_at(97), 598);
+    }
+
+    #[test]
+    fn test_gear_ratios() {
+        let input = fs::read_to_string("test-input.txt").expect("test input exists");
+        let schematic = Schematic::new(&input);
+
+        assert_eq!(schematic.gear_ratios(), vec![16345, 451490]);
     }
 }
