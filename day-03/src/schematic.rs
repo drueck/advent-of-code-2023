@@ -18,13 +18,21 @@ impl Schematic {
         }
     }
 
+    pub fn row(&self, i: usize) -> usize {
+        i / self.columns
+    }
+
+    pub fn column(&self, i: usize) -> usize {
+        i % self.columns
+    }
+
     pub fn adjacent_indices(&self, i: usize) -> Vec<usize> {
         let mut adjacent_indices = vec![];
 
         let can_go_up = i >= self.columns;
-        let can_go_right = i % self.columns < self.columns - 1;
-        let can_go_down = i / self.columns < self.rows - 1;
-        let can_go_left = i % self.columns > 0;
+        let can_go_right = self.column(i) < self.columns - 1;
+        let can_go_down = self.row(i) < self.rows - 1;
+        let can_go_left = self.column(i) > 0;
 
         if can_go_up {
             adjacent_indices.push(i - self.columns)
@@ -68,7 +76,7 @@ impl Schematic {
         for i in 0..self.bytes.len() {
             let byte = self.bytes[i];
 
-            if i % self.columns == 0 || !byte.is_ascii_digit() {
+            if self.column(i) == 0 || !byte.is_ascii_digit() {
                 if !current_number_digits.is_empty() && is_adjacent {
                     let mut part_number = 0;
                     let mut place = 1;
@@ -99,7 +107,7 @@ impl Schematic {
     pub fn part_number_at(&self, i: usize) -> usize {
         debug_assert!(self.bytes[i].is_ascii_digit());
 
-        let first_in_row = i - i % self.columns;
+        let first_in_row = i - self.column(i);
         let last_in_row = first_in_row + self.columns - 1;
 
         let mut left = first_in_row;
