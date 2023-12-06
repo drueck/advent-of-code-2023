@@ -32,12 +32,11 @@ impl FromStr for Card {
 
         let mut parts = s.split('|');
 
-        let mut before_pipe_numbers = re
+        let before_pipe_numbers = re
             .find_iter(parts.next().unwrap())
             .map(|m| m.as_str().parse::<usize>().unwrap());
 
-        let _number = before_pipe_numbers.next().unwrap();
-        let winners = before_pipe_numbers.collect();
+        let winners = before_pipe_numbers.skip(1).collect();
 
         let ours = re
             .find_iter(parts.next().unwrap())
