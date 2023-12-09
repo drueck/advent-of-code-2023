@@ -1,3 +1,6 @@
+// 1 = Joker
+// J = Jack
+
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -25,12 +28,12 @@ impl Hand {
             .as_bytes()
             .iter()
             .map(|&char_byte| match char_byte {
-                n if n.is_ascii_digit() => n - b'0',
-                b'T' => 10,
-                b'J' => 11,
-                b'Q' => 12,
-                b'K' => 13,
                 b'A' => 14,
+                b'K' => 13,
+                b'Q' => 12,
+                b'J' => 11,
+                b'T' => 10,
+                n if n.is_ascii_digit() => n - b'0',
                 _ => unreachable!(),
             })
             .collect::<Vec<u8>>()
@@ -46,6 +49,23 @@ impl Hand {
         for card in cards {
             *card_counts.entry(*card).or_insert(0) += 1;
         }
+
+        if let Some(num_jokers) = card_counts.remove(&1) {
+            match num_jokers {
+                5 => {
+                    card_counts.insert(14, 5);
+                }
+                n => {
+                    let most_prevalent_card = card_counts
+                        .iter()
+                        .max_by(|a, b| a.1.cmp(&b.1))
+                        .map(|(card, _count)| card)
+                        .unwrap();
+
+                    *card_counts.entry(*most_prevalent_card).or_insert(0) += n;
+                }
+            }
+        };
 
         match &card_counts.len() {
             1 => Kind::FiveOfAKind,
@@ -90,29 +110,30 @@ pub mod tests {
     fn test_parse_cards() {
         assert_eq!(Hand::parse_cards("AKQJT"), [14, 13, 12, 11, 10]);
         assert_eq!(Hand::parse_cards("3AJ92"), [3, 14, 11, 9, 2]);
+        assert_eq!(Hand::parse_cards("1234J"), [1, 2, 3, 4, 11]);
     }
 
     #[test]
     fn test_calculate_kind() {
-        let five_of_a_kind = Hand::parse_cards("11111");
+        let five_of_a_kind = Hand::parse_cards("22221");
         assert_eq!(Hand::calculate_kind(&five_of_a_kind), Kind::FiveOfAKind);
 
-        let four_of_a_kind = Hand::parse_cards("11211");
+        let four_of_a_kind = Hand::parse_cards("77271");
         assert_eq!(Hand::calculate_kind(&four_of_a_kind), Kind::FourOfAKind);
 
-        let full_house = Hand::parse_cards("11221");
+        let full_house = Hand::parse_cards("77221");
         assert_eq!(Hand::calculate_kind(&full_house), Kind::FullHouse);
 
-        let three_of_a_kind = Hand::parse_cards("11123");
+        let three_of_a_kind = Hand::parse_cards("17723");
         assert_eq!(Hand::calculate_kind(&three_of_a_kind), Kind::ThreeOfAKind);
 
-        let two_pair = Hand::parse_cards("11223");
+        let two_pair = Hand::parse_cards("77223");
         assert_eq!(Hand::calculate_kind(&two_pair), Kind::TwoPair);
 
-        let one_pair = Hand::parse_cards("11234");
+        let one_pair = Hand::parse_cards("71234");
         assert_eq!(Hand::calculate_kind(&one_pair), Kind::OnePair);
 
-        let high_card = Hand::parse_cards("12345");
+        let high_card = Hand::parse_cards("72345");
         assert_eq!(Hand::calculate_kind(&high_card), Kind::HighCard);
     }
 
@@ -131,7 +152,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_ordering() {
+    fn test_ordering_with_jacks() {
         let input = std::fs::read_to_string("test-input.txt").unwrap();
         let mut hands: Vec<Hand> = input
             .trim()
@@ -146,5 +167,24 @@ pub mod tests {
         assert_eq!(hands[2].bid, 28);
         assert_eq!(hands[3].bid, 684);
         assert_eq!(hands[4].bid, 483);
+    }
+
+    #[test]
+    fn test_ordering_with_jokers() {
+        let input = std::fs::read_to_string("test-input.txt").unwrap();
+        let mut hands: Vec<Hand> = input
+            .replace('J', "1")
+            .trim()
+            .split('\n')
+            .map(|line| line.parse().unwrap())
+            .collect();
+
+        hands.sort_unstable();
+
+        assert_eq!(hands[0].bid, 765);
+        assert_eq!(hands[1].bid, 28);
+        assert_eq!(hands[2].bid, 684);
+        assert_eq!(hands[3].bid, 483);
+        assert_eq!(hands[4].bid, 220);
     }
 }
